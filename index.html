@@ -17,9 +17,9 @@
     <div class="status-group" aria-label="Estado de la partida">
       <div class="status-item"><span class="status-label">NIVEL</span><strong id="levelValue">01</strong><span class="status-total">/ 20</span></div>
       <div class="status-item timer"><span class="status-label">TIEMPO</span><strong id="timerValue">00:00.000</strong></div>
-      <div class="status-item"><span class="status-label">RÉCORD</span><strong id="recordValue">--:---</strong></div>
+      <div class="status-item"><span class="status-label">RÉCORD</span><strong id="recordValue">--:--.---</strong></div>
     </div>
-    <button class="icon-button sound-button" id="soundButton" type="button" aria-label="Activar música" aria-pressed="false">PLAY</button>
+    <div class="header-controls"><div class="player-tag"><span class="status-label">JUGADOR</span><strong id="playerName">Invitado</strong></div><button class="icon-button sound-button" id="soundButton" type="button" aria-label="Activar música" aria-pressed="false">PLAY</button></div>
   </header>
 
   <main class="game-layout">
@@ -48,6 +48,27 @@
     <section class="level-dialog" role="dialog" aria-modal="true" aria-labelledby="levelMenuTitle">
       <div class="modal-heading"><div><span class="eyebrow">ARCHIVO DE SECUENCIAS</span><h2 id="levelMenuTitle">Selecciona un nivel</h2></div><button class="close-button" id="closeLevelMenu" type="button" aria-label="Cerrar menú de niveles">×</button></div>
       <div class="level-grid" id="levelGrid"></div>
+      <section class="leaderboard-section" aria-labelledby="leaderboardTitle">
+        <div class="leaderboard-heading"><span class="eyebrow">🏆 TOP 10 LEYENDAS - NIVEL 20</span><h3 id="leaderboardTitle">Clasificación global</h3></div>
+        <table class="leaderboard-table">
+          <thead><tr><th scope="col">POS.</th><th scope="col">JUGADOR</th><th scope="col">TIEMPO</th></tr></thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </section>
+    </section>
+  </div>
+
+  <div class="nickname-modal" id="nicknameModal" hidden>
+    <div class="modal-backdrop"></div>
+    <section class="nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="nicknameTitle">
+      <span class="eyebrow">IDENTIDAD DE JUGADOR</span>
+      <h2 id="nicknameTitle">Elige tu apodo</h2>
+      <p>Tu nombre aparecerá en la clasificación del Nivel 20.</p>
+      <form id="nicknameForm">
+        <label for="nicknameInput">NICKNAME</label>
+        <input id="nicknameInput" name="nickname" type="text" maxlength="12" autocomplete="nickname" required>
+        <button class="primary-button" type="submit">CONFIRMAR APODO</button>
+      </form>
     </section>
   </div>
 

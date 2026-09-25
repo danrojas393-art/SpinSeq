@@ -18,6 +18,11 @@
     levelModal: document.getElementById('levelModal'),
     levelGrid: document.getElementById('levelGrid'),
     closeLevelMenu: document.getElementById('closeLevelMenu'),
+    leaderboardBody: document.getElementById('leaderboardBody'),
+    playerName: document.getElementById('playerName'),
+    nicknameModal: document.getElementById('nicknameModal'),
+    nicknameForm: document.getElementById('nicknameForm'),
+    nicknameInput: document.getElementById('nicknameInput'),
     victoryModal: document.getElementById('victoryModal'),
     victoryTime: document.getElementById('victoryTime'),
     victoryCountdown: document.getElementById('victoryCountdown'),
@@ -27,6 +32,7 @@
   };
   const palette = ['#06b6d4', '#6366f1', '#0891b2'];
   const HITBOX_MARGIN = 14;
+  const LEADERBOARD_KEY = 'spinseq-level20-leaderboard';
   let levelIndex = 0;
   let state = 'ready';
   let rings = [];
@@ -42,6 +48,8 @@
   let musicTimer = null;
   let musicStep = 0;
   let muted = localStorage.getItem('spinseq_mute') === 'true';
+  let playerName = (localStorage.getItem('spinseq_player_name') || '').trim().slice(0, 12);
+  let highlightedLeaderboardRecord = null;
   let victoryTimer = null;
   let victoryCountdownTimer = null;
 
@@ -126,13 +134,81 @@
   function currentLevel() { return levels[levelIndex]; }
   function getRecord() { return Number(localStorage.getItem(`spinseq-record-${currentLevel().number}`)) || 0; }
   function formatTime(milliseconds) {
-    const minutes = Math.floor(milliseconds / 60000).toString().padStart(2, '0');
-    const seconds = Math.floor((milliseconds % 60000) / 1000).toString().padStart(2, '0');
-    const millis = Math.floor(milliseconds % 1000).toString().padStart(3, '0');
+    const totalMilliseconds = Math.max(0, Math.floor(milliseconds));
+    const minutes = Math.floor(totalMilliseconds / 60000).toString().padStart(2, '0');
+    const seconds = Math.floor((totalMilliseconds % 60000) / 1000).toString().padStart(2, '0');
+    const millis = (totalMilliseconds % 1000).toString().padStart(3, '0');
     return `${minutes}:${seconds}.${millis}`;
   }
-  function formatRecord(milliseconds) { return milliseconds ? formatTime(milliseconds) : '--:---'; }
+  function formatRecord(milliseconds) { return milliseconds ? formatTime(milliseconds) : '--:--.---'; }
   function angleDistance(value, target) { return Math.atan2(Math.sin(value - target), Math.cos(value - target)); }
+
+  function readLeaderboard() {
+    try {
+      const records = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
+      if (!Array.isArray(records)) return [];
+      return records.filter((record) => record && typeof record.name === 'string' && record.name.trim() && Number.isFinite(Number(record.time)) && Number(record.time) > 0)
+        .map((record) => ({ name: record.name.trim().slice(0, 12), time: Math.floor(Number(record.time)) }))
+        .sort((first, second) => first.time - second.time || first.name.localeCompare(second.name))
+        .slice(0, 10);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveLevel20Record(milliseconds) {
+    const records = readLeaderboard();
+    const playerKey = playerName.toLocaleLowerCase();
+    const previousRecord = records.find((record) => record.name.toLocaleLowerCase() === playerKey);
+    const time = Math.floor(milliseconds);
+    if (previousRecord && time >= previousRecord.time) return;
+    const updatedRecords = records.filter((record) => record.name.toLocaleLowerCase() !== playerKey);
+    updatedRecords.push({ name: playerName, time });
+    updatedRecords.sort((first, second) => first.time - second.time || first.name.localeCompare(second.name));
+    const topRecords = updatedRecords.slice(0, 10);
+    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(topRecords));
+    const newPosition = topRecords.findIndex((record) => record.name.toLocaleLowerCase() === playerKey);
+    highlightedLeaderboardRecord = newPosition >= 0 ? { name: playerKey, time } : null;
+  }
+
+  function renderLeaderboard() {
+    const records = readLeaderboard();
+    elements.leaderboardBody.replaceChildren();
+    if (!records.length) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 3;
+      cell.className = 'leaderboard-empty';
+      cell.textContent = 'Aún no hay récords. Completa el Nivel 20 para entrar.';
+      row.appendChild(cell);
+      elements.leaderboardBody.appendChild(row);
+      return;
+    }
+    records.forEach((record, index) => {
+      const row = document.createElement('tr');
+      if (highlightedLeaderboardRecord && record.name.toLocaleLowerCase() === highlightedLeaderboardRecord.name && record.time === highlightedLeaderboardRecord.time) row.classList.add('new-record');
+      [ `#${index + 1}`, record.name, formatTime(record.time) ].forEach((value, cellIndex) => {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        if (cellIndex === 2) cell.className = 'leaderboard-time';
+        row.appendChild(cell);
+      });
+      elements.leaderboardBody.appendChild(row);
+    });
+  }
+
+  function submitNickname(event) {
+    event.preventDefault();
+    const nickname = elements.nicknameInput.value.trim().slice(0, 12);
+    if (!nickname) {
+      elements.nicknameInput.focus();
+      return;
+    }
+    playerName = nickname;
+    localStorage.setItem('spinseq_player_name', playerName);
+    elements.playerName.textContent = playerName;
+    elements.nicknameModal.hidden = true;
+  }
 
   function buildRings() {
     const level = currentLevel();
@@ -262,10 +338,12 @@
     if (targetIndex >= currentLevel().tokens.length) finishLevel(); else updatePanel();
   }
   function finishLevel() {
+    elapsed = Math.max(0, performance.now() - startTime);
     state = 'complete';
     document.body.classList.remove('game-active');
     const record = getRecord();
     if (!record || elapsed < record) localStorage.setItem(`spinseq-record-${currentLevel().number}`, String(elapsed));
+    if (currentLevel().number === 20) saveLevel20Record(elapsed);
     updatePanel();
     showVictoryModal();
   }
@@ -300,10 +378,10 @@
   function toggleGame() { if (state === 'playing') { state = 'paused'; elements.startButton.innerHTML = '<span>▶</span> CONTINUAR'; } else if (state === 'paused' || state === 'ready') startGame(); else if (state === 'complete') { buildRings(); startGame(); } }
   function resetLevel() { state = 'ready'; document.body.classList.remove('game-active'); buildRings(); elements.startButton.innerHTML = '<span>▶</span> INICIAR PARTIDA'; elements.canvasHint.textContent = 'PULSA INICIAR PARA ENTRAR'; }
   function renderLevelGrid() {
-    elements.levelGrid.innerHTML = levels.map((level, index) => { const record = Number(localStorage.getItem(`spinseq-record-${level.number}`)) || 0; return `<button class="level-button${level.nightmare ? ' nightmare' : ''}${index === levelIndex ? ' active' : ''}${record ? ' has-record' : ''}" type="button" data-level-index="${index}"><span class="level-number">Nivel ${level.number}</span><span class="level-label">${level.nightmare ? 'PESADILLA' : 'NIVEL'}</span><span class="level-record">⏱ ${record ? formatTime(record) : '--:--'}</span></button>`; }).join('');
+    elements.levelGrid.innerHTML = levels.map((level, index) => { const record = Number(localStorage.getItem(`spinseq-record-${level.number}`)) || 0; return `<button class="level-button${level.nightmare ? ' nightmare' : ''}${index === levelIndex ? ' active' : ''}${record ? ' has-record' : ''}" type="button" data-level-index="${index}"><span class="level-number">Nivel ${level.number}</span><span class="level-label">${level.nightmare ? 'PESADILLA' : 'NIVEL'}</span><span class="level-record">⏱ ${record ? formatTime(record) : '--:--.---'}</span></button>`; }).join('');
     elements.levelGrid.querySelectorAll('[data-level-index]').forEach((button) => button.addEventListener('click', () => { levelIndex = Number(button.dataset.levelIndex); resetLevel(); closeLevelMenu(); }));
   }
-  function openLevelMenu() { renderLevelGrid(); elements.levelModal.hidden = false; elements.closeLevelMenu.focus(); }
+  function openLevelMenu() { renderLevelGrid(); renderLeaderboard(); elements.levelModal.hidden = false; elements.closeLevelMenu.focus(); }
   function closeLevelMenu() { elements.levelModal.hidden = true; elements.levelMenuButton.focus(); }
 
   function frame(now) {
@@ -319,6 +397,7 @@
   elements.resetButton.addEventListener('click', resetLevel);
   elements.levelMenuButton.addEventListener('click', openLevelMenu);
   elements.closeLevelMenu.addEventListener('click', closeLevelMenu);
+  elements.nicknameForm.addEventListener('submit', submitNickname);
   elements.levelModal.querySelector('[data-close-levels]').addEventListener('click', closeLevelMenu);
   elements.nextLevelButton.addEventListener('click', advanceToNextLevel);
   elements.victoryModal.addEventListener('pointerdown', (event) => { if (event.target !== elements.nextLevelButton) advanceToNextLevel(); });
@@ -333,6 +412,11 @@
   window.addEventListener('resize', draw);
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
   updateSoundButton();
+  elements.playerName.textContent = playerName || 'Invitado';
+  if (!playerName) {
+    elements.nicknameModal.hidden = false;
+    elements.nicknameInput.focus();
+  }
   buildRings();
   requestAnimationFrame(frame);
 }());
