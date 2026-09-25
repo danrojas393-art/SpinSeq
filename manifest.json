@@ -1,0 +1,16 @@
+{
+  "name": "SpinSeq - Concentric Ring Arcade",
+  "short_name": "SpinSeq",
+  "description": "Ordena objetivos en anillos concéntricos que giran en tiempo real.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait-primary",
+  "icons": [{
+    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230a0e17'/%3E%3Ccircle cx='96' cy='96' r='65' fill='none' stroke='%2306b6d4' stroke-width='16'/%3E%3Ccircle cx='96' cy='96' r='20' fill='%2322c55e'/%3E%3C/svg%3E",
+    "sizes": "192x192",
+    "type": "image/svg+xml",
+    "purpose": "any maskable"
+  }]
+}

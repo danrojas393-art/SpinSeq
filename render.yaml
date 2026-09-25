@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: spinseq
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: true

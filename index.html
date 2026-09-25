@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="description" content="SpinSeq: ordena objetivos en anillos concéntricos que giran en tiempo real.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0e17'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2306b6d4' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%2322c55e'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <title>SpinSeq // Arcade</title>
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="SpinSeq inicio"><span class="brand-mark">S</span><span>SPIN<span class="accent">SEQ</span></span></a>
+    <div class="status-group" aria-label="Estado de la partida">
+      <div class="status-item"><span class="status-label">NIVEL</span><strong id="levelValue">01</strong><span class="status-total">/ 20</span></div>
+      <div class="status-item timer"><span class="status-label">TIEMPO</span><strong id="timerValue">00:00.000</strong></div>
+      <div class="status-item"><span class="status-label">RÉCORD</span><strong id="recordValue">--:---</strong></div>
+    </div>
+    <button class="icon-button sound-button" id="soundButton" type="button" aria-label="Activar música" aria-pressed="false">PLAY</button>
+  </header>
+
+  <main class="game-layout">
+    <section class="game-stage" aria-label="Tablero de SpinSeq">
+      <div class="stage-heading">
+        <div><span class="eyebrow">SECUENCIA ACTIVA</span><h1 id="levelTitle">Cadena numérica</h1></div>
+        <span class="mode-badge" id="modeBadge">NORMAL</span>
+      </div>
+      <div class="canvas-shell">
+        <canvas id="gameCanvas" width="760" height="760" aria-label="Anillos interactivos de SpinSeq"></canvas>
+        <div class="canvas-hint" id="canvasHint">PULSA INICIAR PARA ENTRAR</div>
+      </div>
+      <div class="stage-footer"><span><i class="legend-dot target-dot"></i>OBJETIVO</span><span><i class="legend-dot ring-dot"></i>ANILLOS EN ROTACIÓN</span><span><i class="legend-dot hit-dot"></i>ACIERTO</span></div>
+    </section>
+
+    <aside class="control-panel" aria-label="Controles y progreso">
+      <div class="progress-block"><div class="row-label"><span>ENCONTRADOS</span><strong id="progressValue">0 / 25</strong></div><div class="progress-track"><span id="progressBar"></span></div></div>
+      <div class="control-actions"><button class="primary-button" id="startButton" type="button"><span>▶</span> INICIAR PARTIDA</button><button class="secondary-button" id="resetButton" type="button">↻ REINICIAR NIVEL</button><button class="menu-button" id="levelMenuButton" type="button">☷ MENÚ / NIVELES</button></div>
+      <div class="tip-box"><span class="tip-icon">✦</span><p>Los anillos giran constantemente. Selecciona los objetivos en orden antes de que se agote tu concentración.</p></div>
+    </aside>
+  </main>
+  <footer class="site-footer"><span>SPINSEQ // REACCIÓN · MEMORIA · RITMO</span><span class="online-state"><i></i> SISTEMA ONLINE</span></footer>
+
+  <div class="level-modal" id="levelModal" hidden>
+    <div class="modal-backdrop" data-close-levels></div>
+    <section class="level-dialog" role="dialog" aria-modal="true" aria-labelledby="levelMenuTitle">
+      <div class="modal-heading"><div><span class="eyebrow">ARCHIVO DE SECUENCIAS</span><h2 id="levelMenuTitle">Selecciona un nivel</h2></div><button class="close-button" id="closeLevelMenu" type="button" aria-label="Cerrar menú de niveles">×</button></div>
+      <div class="level-grid" id="levelGrid"></div>
+    </section>
+  </div>
+
+  <div class="victory-modal" id="victoryModal" hidden>
+    <div class="modal-backdrop" data-advance-level></div>
+    <section class="victory-dialog" role="dialog" aria-modal="true" aria-labelledby="victoryTitle">
+      <span class="eyebrow">SECUENCIA COMPLETADA</span>
+      <h2 id="victoryTitle">Nivel superado</h2>
+      <p class="victory-time-label">TIEMPO LOGRADO</p>
+      <strong class="victory-time" id="victoryTime">00:00.000</strong>
+      <p class="victory-countdown" id="victoryCountdown">Siguiente nivel en 2</p>
+      <button class="primary-button" id="nextLevelButton" type="button">▶ SIGUIENTE NIVEL</button>
+    </section>
+  </div>
+
+  <script src="js/levels.js"></script>
+  <script src="js/gameEngine.js"></script>
+</body>
+</html>
