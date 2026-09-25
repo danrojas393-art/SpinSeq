@@ -19,6 +19,7 @@
     levelGrid: document.getElementById('levelGrid'),
     closeLevelMenu: document.getElementById('closeLevelMenu'),
     leaderboardBody: document.getElementById('leaderboardBody'),
+    leaderboardStatus: document.getElementById('leaderboardStatus'),
     playerName: document.getElementById('playerName'),
     nicknameModal: document.getElementById('nicknameModal'),
     nicknameForm: document.getElementById('nicknameForm'),
@@ -32,7 +33,6 @@
   };
   const palette = ['#06b6d4', '#6366f1', '#0891b2'];
   const HITBOX_MARGIN = 14;
-  const LEADERBOARD_KEY = 'spinseq-level20-leaderboard';
   let levelIndex = 0;
   let state = 'ready';
   let rings = [];
@@ -49,6 +49,7 @@
   let musicStep = 0;
   let muted = localStorage.getItem('spinseq_mute') === 'true';
   let playerName = (localStorage.getItem('spinseq_player_name') || '').trim().slice(0, 12);
+  let leaderboardRecords = [];
   let highlightedLeaderboardRecord = null;
   let victoryTimer = null;
   let victoryCountdownTimer = null;
@@ -143,50 +144,22 @@
   function formatRecord(milliseconds) { return milliseconds ? formatTime(milliseconds) : '--:--.---'; }
   function angleDistance(value, target) { return Math.atan2(Math.sin(value - target), Math.cos(value - target)); }
 
-  function readLeaderboard() {
-    try {
-      const records = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
-      if (!Array.isArray(records)) return [];
-      return records.filter((record) => record && typeof record.name === 'string' && record.name.trim() && Number.isFinite(Number(record.time)) && Number(record.time) > 0)
-        .map((record) => ({ name: record.name.trim().slice(0, 12), time: Math.floor(Number(record.time)) }))
-        .sort((first, second) => first.time - second.time || first.name.localeCompare(second.name))
-        .slice(0, 10);
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function saveLevel20Record(milliseconds) {
-    const records = readLeaderboard();
-    const playerKey = playerName.toLocaleLowerCase();
-    const previousRecord = records.find((record) => record.name.toLocaleLowerCase() === playerKey);
-    const time = Math.floor(milliseconds);
-    if (previousRecord && time >= previousRecord.time) return;
-    const updatedRecords = records.filter((record) => record.name.toLocaleLowerCase() !== playerKey);
-    updatedRecords.push({ name: playerName, time });
-    updatedRecords.sort((first, second) => first.time - second.time || first.name.localeCompare(second.name));
-    const topRecords = updatedRecords.slice(0, 10);
-    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(topRecords));
-    const newPosition = topRecords.findIndex((record) => record.name.toLocaleLowerCase() === playerKey);
-    highlightedLeaderboardRecord = newPosition >= 0 ? { name: playerKey, time } : null;
-  }
-
   function renderLeaderboard() {
-    const records = readLeaderboard();
+    const records = leaderboardRecords;
     elements.leaderboardBody.replaceChildren();
     if (!records.length) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
       cell.colSpan = 3;
       cell.className = 'leaderboard-empty';
-      cell.textContent = 'Aún no hay récords. Completa el Nivel 20 para entrar.';
+      cell.textContent = 'Aún no hay tiempos en la clasificación mundial.';
       row.appendChild(cell);
       elements.leaderboardBody.appendChild(row);
       return;
     }
     records.forEach((record, index) => {
       const row = document.createElement('tr');
-      if (highlightedLeaderboardRecord && record.name.toLocaleLowerCase() === highlightedLeaderboardRecord.name && record.time === highlightedLeaderboardRecord.time) row.classList.add('new-record');
+      if (highlightedLeaderboardRecord && record.id === highlightedLeaderboardRecord) row.classList.add('new-record');
       [ `#${index + 1}`, record.name, formatTime(record.time) ].forEach((value, cellIndex) => {
         const cell = document.createElement('td');
         cell.textContent = value;
@@ -194,6 +167,57 @@
         row.appendChild(cell);
       });
       elements.leaderboardBody.appendChild(row);
+    });
+  }
+
+  function handleFirebaseReady(event) {
+    const detail = event.detail || {};
+    if (!detail.configured) {
+      elements.leaderboardStatus.textContent = 'Configura Firebase para activar la clasificación mundial.';
+      return;
+    }
+    if (detail.error || !detail.database || !detail.databaseSdk) {
+      elements.leaderboardStatus.textContent = 'No se pudo conectar con la clasificación mundial.';
+      return;
+    }
+
+    const { database, databaseSdk } = detail;
+    const scoresRef = databaseSdk.ref(database, 'leaderboards/level20/entries');
+    const topScores = databaseSdk.query(scoresRef, databaseSdk.orderByChild('timeMs'), databaseSdk.limitToFirst(10));
+    databaseSdk.onValue(topScores, (snapshot) => {
+      leaderboardRecords = [];
+      snapshot.forEach((recordSnapshot) => {
+        const value = recordSnapshot.val();
+        const time = Number(value && value.timeMs);
+        if (!value || typeof value.nickname !== 'string' || !value.nickname.trim() || !Number.isFinite(time) || time <= 0) return;
+        leaderboardRecords.push({ id: recordSnapshot.key, name: value.nickname.trim().slice(0, 12), time: Math.floor(time) });
+      });
+      leaderboardRecords.sort((first, second) => first.time - second.time || first.name.localeCompare(second.name));
+      leaderboardRecords = leaderboardRecords.slice(0, 10);
+      elements.leaderboardStatus.textContent = 'En vivo · actualizado automáticamente';
+      renderLeaderboard();
+    }, () => {
+      elements.leaderboardStatus.textContent = 'No se pudo leer la clasificación mundial.';
+    });
+  }
+
+  function submitLevel20Record(milliseconds) {
+    const databaseSdk = window.SPINSEQ_FIREBASE_SDK;
+    const database = window.SPINSEQ_DATABASE;
+    if (!database || !databaseSdk || !playerName) return;
+
+    const recordRef = databaseSdk.push(databaseSdk.ref(database, 'leaderboards/level20/entries'));
+    const time = Math.floor(milliseconds);
+    highlightedLeaderboardRecord = recordRef.key;
+    databaseSdk.set(recordRef, {
+      nickname: playerName,
+      timeMs: time,
+      timeFormatted: formatTime(time),
+      createdAt: databaseSdk.serverTimestamp()
+    }).then(() => {
+      elements.leaderboardStatus.textContent = 'Tiempo del Nivel 20 enviado al ranking mundial.';
+    }).catch(() => {
+      elements.leaderboardStatus.textContent = 'No se pudo enviar el tiempo. Revisa tu conexión.';
     });
   }
 
@@ -343,7 +367,7 @@
     document.body.classList.remove('game-active');
     const record = getRecord();
     if (!record || elapsed < record) localStorage.setItem(`spinseq-record-${currentLevel().number}`, String(elapsed));
-    if (currentLevel().number === 20) saveLevel20Record(elapsed);
+    if (currentLevel().number === 20) submitLevel20Record(elapsed);
     updatePanel();
     showVictoryModal();
   }
@@ -398,6 +422,7 @@
   elements.levelMenuButton.addEventListener('click', openLevelMenu);
   elements.closeLevelMenu.addEventListener('click', closeLevelMenu);
   elements.nicknameForm.addEventListener('submit', submitNickname);
+  window.addEventListener('spinseq-firebase-ready', handleFirebaseReady);
   elements.levelModal.querySelector('[data-close-levels]').addEventListener('click', closeLevelMenu);
   elements.nextLevelButton.addEventListener('click', advanceToNextLevel);
   elements.victoryModal.addEventListener('pointerdown', (event) => { if (event.target !== elements.nextLevelButton) advanceToNextLevel(); });

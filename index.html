@@ -49,7 +49,8 @@
       <div class="modal-heading"><div><span class="eyebrow">ARCHIVO DE SECUENCIAS</span><h2 id="levelMenuTitle">Selecciona un nivel</h2></div><button class="close-button" id="closeLevelMenu" type="button" aria-label="Cerrar menú de niveles">×</button></div>
       <div class="level-grid" id="levelGrid"></div>
       <section class="leaderboard-section" aria-labelledby="leaderboardTitle">
-        <div class="leaderboard-heading"><span class="eyebrow">🏆 TOP 10 LEYENDAS - NIVEL 20</span><h3 id="leaderboardTitle">Clasificación global</h3></div>
+        <div class="leaderboard-heading"><span class="eyebrow">🏆 TOP 10 MUNDIAL - NIVEL 20</span><h3 id="leaderboardTitle">Clasificación global</h3></div>
+        <p class="leaderboard-status" id="leaderboardStatus" role="status" aria-live="polite">Conectando con la clasificación mundial…</p>
         <table class="leaderboard-table">
           <thead><tr><th scope="col">POS.</th><th scope="col">JUGADOR</th><th scope="col">TIEMPO</th></tr></thead>
           <tbody id="leaderboardBody"></tbody>
@@ -86,5 +87,6 @@
 
   <script src="js/levels.js"></script>
   <script src="js/gameEngine.js"></script>
+  <script type="module" src="js/firebaseConfig.js"></script>
 </body>
 </html>
