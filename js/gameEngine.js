@@ -2,8 +2,33 @@
   'use strict';
 
   const levels = window.SPINSEQ_LEVELS;
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  levels.forEach((level) => {
+    if (level.number >= 13 && level.number <= 19) {
+      level.ringCount = level.number <= 14 ? 4 : level.number <= 17 ? 5 : 6;
+      if (level.number >= 15) {
+        level.tokens = level.tokens.slice(0, -10);
+        const retainedTokens = new Set(level.tokens);
+        level.sequence = level.sequence.filter((token) => retainedTokens.has(token));
+      }
+    }
+  });
+  const finalLevel = levels.find((level) => level.number === 20);
+  if (finalLevel) {
+    finalLevel.ringCount = 6;
+    finalLevel.tokens = finalLevel.tokens.filter((token) => token.value <= 90).map((token) => ({
+      ...token,
+      label: token.value <= 76 && (token.value - 1) % 3 === 0
+        ? alphabet[(token.value - 1) / 3]
+        : token.label
+    }));
+    finalLevel.sequence = finalLevel.tokens.slice().sort((first, second) => first.value - second.value);
+  }
   const canvas = document.getElementById('gameCanvas');
   const context = canvas.getContext('2d');
+  const tokenStyles = getComputedStyle(canvas);
+  const tokenOutlineColor = tokenStyles.getPropertyValue('--token-outline').trim() || '#050914';
+  const tokenHaloColor = tokenStyles.getPropertyValue('--token-halo').trim() || '#67e8f9';
   const elements = {
     levelValue: document.getElementById('levelValue'),
     timerValue: document.getElementById('timerValue'),
@@ -29,7 +54,8 @@
     victoryCountdown: document.getElementById('victoryCountdown'),
     nextLevelButton: document.getElementById('nextLevelButton'),
     canvasHint: document.getElementById('canvasHint'),
-    soundButton: document.getElementById('soundButton')
+    soundButton: document.getElementById('soundButton'),
+    hintButton: document.getElementById('hintButton')
   };
   const palette = ['#06b6d4', '#6366f1', '#0891b2'];
   const HITBOX_MARGIN = 14;
@@ -53,6 +79,9 @@
   let highlightedLeaderboardRecord = null;
   let victoryTimer = null;
   let victoryCountdownTimer = null;
+  let inactivityElapsed = 0;
+  let hintedToken = null;
+  let hintExpiresAt = 0;
 
   function updateSoundButton() {
     elements.soundButton.textContent = muted ? 'PLAY' : 'MUTE';
@@ -236,15 +265,21 @@
 
   function buildRings() {
     const level = currentLevel();
+    const innerRadius = level.ringCount > 3 ? 82 : 62;
+    const outerRadius = 354;
     rings = Array.from({ length: level.ringCount }, (_, ringIndex) => {
       const tokens = level.tokens.filter((_, tokenIndex) => tokenIndex % level.ringCount === ringIndex);
-      const radiusStep = level.ringCount > 1 ? 292 / (level.ringCount - 1) : 0;
-      return { tokens, radius: 62 + ringIndex * radiusStep, width: level.ringCount > 3 ? 48 : 70, rotation: ringIndex * 1.7, direction: ringIndex % 2 ? -1 : 1 };
+      const radiusStep = level.ringCount > 1 ? (outerRadius - innerRadius) / (level.ringCount - 1) : 0;
+      return { tokens, radius: innerRadius + ringIndex * radiusStep, width: level.ringCount > 3 ? 48 : 70, rotation: ringIndex * 1.7, direction: ringIndex % 2 ? -1 : 1 };
     });
     targetIndex = 0;
     elapsed = 0;
     feedback = null;
     completedTokens = [];
+    inactivityElapsed = 0;
+    hintedToken = null;
+    hintExpiresAt = 0;
+    elements.hintButton.classList.remove('hint-button--urgent');
     updatePanel();
   }
 
@@ -293,29 +328,34 @@
     const segmentAngle = (Math.PI * 2) / ring.tokens.length;
     ring.tokens.forEach((token, tokenIndex) => {
       const angle = ring.rotation + tokenIndex * segmentAngle;
+      const isHinted = hintedToken === token && performance.now() < hintExpiresAt;
+      const hintPulse = isHinted ? 0.65 + (Math.sin(performance.now() / 150) + 1) * 0.4 : 1;
       const isHit = completedTokens.includes(token) || (feedback && feedback.token === token && feedback.type === 'hit');
       const isMiss = feedback && feedback.token === token && feedback.type === 'miss';
       const missBlink = isMiss && Math.floor((performance.now() - feedback.started) / 70) % 2 === 0;
       context.beginPath();
       context.arc(0, 0, ring.radius, angle + 0.018, angle + segmentAngle - 0.018);
-      context.strokeStyle = isHit ? '#22c55e' : missBlink ? '#ef4444' : palette[ringIndex];
-      context.globalAlpha = .65;
-      context.lineWidth = isHit || missBlink ? 5 : 3;
-      context.shadowColor = missBlink ? '#ef4444' : isHit ? '#22c55e' : palette[ringIndex];
-      context.shadowBlur = missBlink || isHit ? 18 : 4;
+      context.strokeStyle = isHinted ? '#facc15' : isHit ? '#22c55e' : missBlink ? '#ef4444' : palette[ringIndex];
+      context.globalAlpha = isHinted ? hintPulse : .65;
+      context.lineWidth = isHinted ? 6 : isHit || missBlink ? 5 : 3;
+      context.shadowColor = isHinted ? '#facc15' : missBlink ? '#ef4444' : isHit ? '#22c55e' : palette[ringIndex];
+      context.shadowBlur = isHinted ? 15 + hintPulse * 16 : missBlink || isHit ? 18 : 4;
       context.stroke();
       context.shadowBlur = 0;
       context.globalAlpha = 1;
       context.save();
       context.rotate(angle + segmentAngle / 2);
       context.translate(ring.radius, 0);
-      context.fillStyle = isHit ? '#22c55e' : missBlink ? '#ef4444' : '#ffffff';
-      context.strokeStyle = '#000000';
-      context.lineWidth = 5;
-      context.font = `800 ${token.label.length > 1 ? 22 : 26}px Barlow Condensed, sans-serif`;
+      context.fillStyle = isHinted ? '#fef08a' : isHit ? '#22c55e' : missBlink ? '#ef4444' : '#ffffff';
+      context.strokeStyle = tokenOutlineColor;
+      context.lineWidth = 7;
+      context.font = `900 ${token.label.length > 1 ? 25 : 29}px Barlow Condensed, sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
+      context.shadowColor = isHinted ? '#facc15' : tokenHaloColor;
+      context.shadowBlur = isHinted ? 24 : 9;
       context.strokeText(token.label, 0, 0);
+      context.shadowBlur = 0;
       context.fillText(token.label, 0, 0);
       context.restore();
     });
@@ -353,11 +393,27 @@
   function handlePointer(event) { checkHit(event.clientX, event.clientY); }
 
   function showFeedback(token, type) { feedback = { token, type, started: performance.now(), until: performance.now() + (type === 'miss' ? 420 : 280) }; }
+  function mostrarAnuncioRecompensa(callback) {
+    if (typeof callback === 'function') callback();
+  }
+  function showHint() {
+    const level = currentLevel();
+    const target = getCurrentTarget();
+    if (!target) return;
+    mostrarAnuncioRecompensa(() => {
+      if (currentLevel() !== level || getCurrentTarget() !== target) return;
+      hintedToken = target;
+      hintExpiresAt = performance.now() + 3000;
+    });
+  }
   function handleCorrect(token) {
     if (!completedTokens.includes(token)) completedTokens.push(token);
     showFeedback(token, 'hit');
     playCorrectSfx();
     targetIndex += 1;
+    inactivityElapsed = 0;
+    hintedToken = null;
+    hintExpiresAt = 0;
     if (currentLevel().nightmare) rings.forEach((ring) => { ring.direction *= -1; ring.rotation += Math.PI / 7; });
     if (targetIndex >= currentLevel().tokens.length) finishLevel(); else updatePanel();
   }
@@ -409,9 +465,19 @@
   function closeLevelMenu() { elements.levelModal.hidden = true; elements.levelMenuButton.focus(); }
 
   function frame(now) {
-    const delta = Math.min(now - lastFrame, 80);
+    const frameElapsed = Math.max(0, now - lastFrame);
+    const delta = Math.min(frameElapsed, 80);
     lastFrame = now;
-    if (state === 'playing') { elapsed = Math.max(0, now - startTime); rings.forEach((ring) => { ring.rotation += ring.direction * currentLevel().speed * delta / 1000; }); updatePanel(); }
+    if (state === 'playing') {
+      elapsed = Math.max(0, now - startTime);
+      inactivityElapsed += frameElapsed;
+      elements.hintButton.classList.toggle('hint-button--urgent', inactivityElapsed >= 15000);
+      rings.forEach((ring) => { ring.rotation += ring.direction * currentLevel().speed * delta / 1000; });
+      updatePanel();
+    } else if (state !== 'paused') {
+      elements.hintButton.classList.remove('hint-button--urgent');
+    }
+    if (hintedToken && now >= hintExpiresAt) hintedToken = null;
     if (feedback && now > feedback.until) feedback = null;
     draw();
     requestAnimationFrame(frame);
@@ -419,6 +485,7 @@
 
   elements.startButton.addEventListener('click', toggleGame);
   elements.resetButton.addEventListener('click', resetLevel);
+  elements.hintButton.addEventListener('click', showHint);
   elements.levelMenuButton.addEventListener('click', openLevelMenu);
   elements.closeLevelMenu.addEventListener('click', closeLevelMenu);
   elements.nicknameForm.addEventListener('submit', submitNickname);
