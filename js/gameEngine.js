@@ -4,6 +4,9 @@
   const levels = window.SPINSEQ_LEVELS;
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   levels.forEach((level) => {
+    if (level.number >= 10 && level.number <= 12) {
+      level.ringCount += 1;
+    }
     if (level.number >= 13 && level.number <= 19) {
       level.ringCount = level.number <= 14 ? 4 : level.number <= 17 ? 5 : 6;
       if (level.number >= 15) {
@@ -265,12 +268,13 @@
 
   function buildRings() {
     const level = currentLevel();
-    const innerRadius = level.ringCount > 3 ? 82 : 62;
+    const ringCount = level.ringCount;
+    const innerRadius = ringCount > 3 ? 82 : 62;
     const outerRadius = 354;
-    rings = Array.from({ length: level.ringCount }, (_, ringIndex) => {
-      const tokens = level.tokens.filter((_, tokenIndex) => tokenIndex % level.ringCount === ringIndex);
-      const radiusStep = level.ringCount > 1 ? (outerRadius - innerRadius) / (level.ringCount - 1) : 0;
-      return { tokens, radius: innerRadius + ringIndex * radiusStep, width: level.ringCount > 3 ? 48 : 70, rotation: ringIndex * 1.7, direction: ringIndex % 2 ? -1 : 1 };
+    const radiusStep = ringCount > 1 ? (outerRadius - innerRadius) / (ringCount - 1) : 0;
+    rings = Array.from({ length: ringCount }, (_, ringIndex) => {
+      const tokens = level.tokens.filter((_, tokenIndex) => tokenIndex % ringCount === ringIndex);
+      return { tokens, radius: innerRadius + ringIndex * radiusStep, width: ringCount > 3 ? 48 : 70, rotation: ringIndex * 1.7, direction: ringIndex % 2 ? -1 : 1 };
     });
     targetIndex = 0;
     elapsed = 0;
