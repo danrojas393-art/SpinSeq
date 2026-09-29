@@ -1,0 +1,29 @@
+{
+  "name": "spinseq",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/build-service-worker.mjs",
+    "android:add": "npm run build && cap add android && node scripts/configure-android.mjs",
+    "android:sync": "npm run build && cap sync android && node scripts/configure-android.mjs",
+    "android:open": "cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "dotenv": "^16.6.1",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.1.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

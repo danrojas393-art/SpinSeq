@@ -58,7 +58,8 @@
     nextLevelButton: document.getElementById('nextLevelButton'),
     canvasHint: document.getElementById('canvasHint'),
     soundButton: document.getElementById('soundButton'),
-    hintButton: document.getElementById('hintButton')
+    hintButton: document.getElementById('hintButton'),
+    adStatus: document.getElementById('adStatus')
   };
   const palette = ['#06b6d4', '#6366f1', '#0891b2'];
   const HITBOX_MARGIN = 14;
@@ -397,18 +398,31 @@
   function handlePointer(event) { checkHit(event.clientX, event.clientY); }
 
   function showFeedback(token, type) { feedback = { token, type, started: performance.now(), until: performance.now() + (type === 'miss' ? 420 : 280) }; }
-  function mostrarAnuncioRecompensa(callback) {
-    if (typeof callback === 'function') callback();
-  }
-  function showHint() {
+  async function showHint() {
     const level = currentLevel();
     const target = getCurrentTarget();
-    if (!target) return;
-    mostrarAnuncioRecompensa(() => {
+    if (!target || elements.hintButton.disabled) return;
+    const admob = window.SPINSEQ_ADMOB;
+    if (!admob) {
+      elements.adStatus.textContent = 'Los anuncios aún no están listos. Inténtalo de nuevo.';
+      elements.adStatus.hidden = false;
+      return;
+    }
+    elements.hintButton.disabled = true;
+    elements.adStatus.textContent = '';
+    elements.adStatus.hidden = true;
+    try {
+      await admob.showRewardedAd();
       if (currentLevel() !== level || getCurrentTarget() !== target) return;
       hintedToken = target;
       hintExpiresAt = performance.now() + 3000;
-    });
+    } catch (error) {
+      console.error('[AdMob] No se pudo completar el anuncio recompensado.', error);
+      elements.adStatus.textContent = error.message || 'No se pudo completar el anuncio. No se otorgó la pista.';
+      elements.adStatus.hidden = false;
+    } finally {
+      elements.hintButton.disabled = false;
+    }
   }
   function handleCorrect(token) {
     if (!completedTokens.includes(token)) completedTokens.push(token);

@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SpinSeq</string>
+    <string name="title_activity_main">SpinSeq</string>
+    <string name="package_name">com.spinseq.game</string>
+    <string name="custom_url_scheme">com.spinseq.game</string>
+    <string name="admob_app_id">ca-app-pub-2312533911460449~2458854325</string>
+</resources>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e17">
   <meta name="description" content="SpinSeq: ordena objetivos en anillos concéntricos que giran en tiempo real.">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0e17'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2306b6d4' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%2322c55e'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
   <title>SpinSeq // Arcade</title>
@@ -41,8 +41,9 @@
       <div class="tip-box"><span class="tip-icon">✦</span><p>Los anillos giran constantemente. Selecciona los objetivos en orden antes de que se agote tu concentración.</p></div>
     </aside>
   </main>
-  <footer class="site-footer"><span>SPINSEQ // REACCIÓN · MEMORIA · RITMO</span><span class="online-state"><i></i> SISTEMA ONLINE</span></footer>
+  <footer class="site-footer"><span>SPINSEQ // REACCIÓN · MEMORIA · RITMO</span><button class="privacy-options-button" id="privacyOptionsButton" type="button" hidden>Privacidad de anuncios</button><span class="online-state"><i></i> SISTEMA ONLINE</span></footer>
   <button class="hint-button" id="hintButton" type="button" aria-label="Ver anuncio recompensado para obtener una pista"><span aria-hidden="true">►</span> 💡 Pista (Ver Anuncio)</button>
+  <p class="ad-status" id="adStatus" role="status" aria-live="polite" hidden></p>
 
   <div class="level-modal" id="levelModal" hidden>
     <div class="modal-backdrop" data-close-levels></div>
@@ -86,8 +87,9 @@
     </section>
   </div>
 
-  <script src="js/levels.js"></script>
-  <script src="js/gameEngine.js"></script>
+  <script type="module" src="js/levels.js"></script>
+  <script type="module" src="js/gameEngine.js"></script>
   <script type="module" src="js/firebaseConfig.js"></script>
+  <script type="module" src="js/admob.js"></script>
 </body>
 </html>

@@ -4,6 +4,15 @@
 .hint-button span { margin-right: 6px; color: #facc15; font-family: 'Space Mono', monospace; font-size: 11px; }
 .hint-button:hover { border-color: #fef08a; background: #202b3c; box-shadow: 0 0 20px rgba(250, 204, 21, .55); }
 .hint-button--urgent { animation: hint-neon-urgent .65s ease-in-out infinite; }
+.hint-button:disabled { opacity: .55; cursor: wait; animation: none; }
+.privacy-options-button { border: 0; padding: 4px 0; color: var(--muted); background: transparent; font: inherit; cursor: pointer; }
+.privacy-options-button:hover { color: var(--text); }
+.privacy-options-button[hidden] { display: none; }
+.ad-status { position: fixed; right: 22px; bottom: calc(var(--admob-banner-height, 0px) + 74px); z-index: 6; max-width: min(360px, calc(100vw - 24px)); margin: 0; padding: 9px 12px; border: 1px solid var(--line); color: var(--text); background: rgba(17, 24, 39, .96); font-size: 13px; letter-spacing: .02em; }
+.ad-status[hidden] { display: none; }
+body.admob-banner-visible { padding-bottom: calc(var(--admob-banner-height, 50px) + env(safe-area-inset-bottom)); }
+body.admob-banner-visible .hint-button { bottom: calc(var(--admob-banner-height, 50px) + 12px + env(safe-area-inset-bottom)); }
+body.admob-banner-visible .ad-status { bottom: calc(var(--admob-banner-height, 50px) + 66px + env(safe-area-inset-bottom)); }
 @keyframes hint-neon { 0%, 100% { box-shadow: 0 0 8px rgba(250, 204, 21, .2), inset 0 0 8px rgba(250, 204, 21, .04); } 50% { box-shadow: 0 0 15px rgba(250, 204, 21, .4), inset 0 0 12px rgba(250, 204, 21, .1); } }
 @keyframes hint-neon-urgent { 0%, 100% { color: #fef08a; box-shadow: 0 0 10px rgba(250, 204, 21, .4), inset 0 0 10px rgba(250, 204, 21, .08); } 50% { color: #fff; box-shadow: 0 0 26px rgba(250, 204, 21, .9), inset 0 0 18px rgba(250, 204, 21, .2); } }
 

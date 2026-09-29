@@ -46,3 +46,70 @@ El objetivo es encontrar y presionar la secuencia correcta de números y letras 
 Puedes probar el juego directamente desde cualquier navegador (PC o celular) o instalarlo como App desde el siguiente enlace:
 
 👉 **[Jugar a SpinSeq en Render](https://spinseq.onrender.com)
+
+---
+
+## 📱 Aplicación Android (Capacitor + AdMob)
+
+La app Android usa Capacitor 8 y el plugin nativo `@capacitor-community/admob`. Los IDs se leen de `.env`; ese archivo está excluido de Git. Los IDs de AdMob no son contraseñas: se incluyen en la app compilada y pueden inspeccionarse en el dispositivo.
+
+### Requisitos
+
+* Node.js 22 o posterior, Android Studio, Android SDK y JDK compatibles con Android Studio.
+* Una aplicación y unidades de anuncios creadas en AdMob.
+
+### Instalar y crear Android
+
+Desde la raíz del repositorio, copia `.env.example` como `.env` si todavía no tienes ese archivo y verifica `VITE_ADMOB_APP_ID`, `VITE_ADMOB_BANNER_ID` y `VITE_ADMOB_REWARDED_ID`. La configuración local ya usa los IDs proporcionados. Mantén `VITE_ADMOB_TESTING=true` durante las pruebas. Antes de crear Android, confirma que `appId` en `capacitor.config.json` sea el identificador definitivo de tu app; cambiarlo más adelante también requiere actualizar `applicationId` en Gradle.
+
+```powershell
+npm install
+npm run android:add
+npm run android:open
+```
+
+`android:add` genera el sitio en `dist`, añade la plataforma y configura el ID de aplicación de AdMob en Android. También fija `android:screenOrientation="portrait"` en la actividad launcher; es un bloqueo nativo, además de `orientation: "portrait-primary"` del manifiesto PWA.
+
+En Android Studio, deja que Gradle sincronice y ejecuta la aplicación en un dispositivo Android o emulador. AdMob debe probarse con anuncios de prueba; no pulses tus anuncios reales para probarlos. Después de cambiar el sitio o `.env`, ejecuta:
+
+```powershell
+npm run android:sync
+```
+
+### Generar el `.aab` firmado desde terminal (Windows)
+
+Requiere JDK 21, Android SDK con **Android SDK Platform 36** y **Android SDK Build-Tools 36.0.0**, además de aceptar las licencias del SDK. Instala el JDK y las herramientas de línea de comandos de Android si aún no están instalados; configura `JAVA_HOME` y `ANDROID_HOME`/`ANDROID_SDK_ROOT` para esta terminal.
+
+1. Confirma que `com.spinseq.game` coincide con el paquete de Play Console; no lo cambies tras publicar la primera versión.
+2. En PowerShell, crea una clave de carga segura. Sustituye la ruta si deseas almacenar la clave en otra ubicación y guarda su contraseña fuera del repositorio:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.android" | Out-Null
+keytool -genkeypair -v -keystore "$env:USERPROFILE\.android\spinseq-upload.jks" -keyalg RSA -keysize 2048 -validity 10000 -alias spinseq-upload
+```
+
+3. Configura la firma en el archivo personal `%USERPROFILE%\.gradle\gradle.properties` (créalo si hace falta). Añade estas propiedades y reemplaza los valores de ejemplo; este archivo queda fuera del repositorio:
+
+```properties
+SPINSEQ_UPLOAD_STORE_FILE=C:/Users/TU_USUARIO/.android/spinseq-upload.jks
+SPINSEQ_UPLOAD_STORE_PASSWORD=TU_CONTRASENA_DEL_KEYSTORE
+SPINSEQ_UPLOAD_KEY_ALIAS=spinseq-upload
+SPINSEQ_UPLOAD_KEY_PASSWORD=TU_CONTRASENA_DE_LA_CLAVE
+```
+
+4. En la raíz del repositorio, conserva `VITE_ADMOB_TESTING=true` mientras pruebas. Para la versión de producción, ponlo en `false` en `.env` y sincroniza:
+
+```powershell
+npm run android:sync
+```
+
+5. Compila el Android App Bundle firmado desde la raíz:
+
+```powershell
+Set-Location android
+.\gradlew.bat bundleRelease
+```
+
+El archivo listo para subir estará en `android\app\build\outputs\bundle\release\app-release.aab`. El proyecto ahora exige la firma configurada al pedir un bundle/ APK `release`; no almacenes el keystore ni sus contraseñas en Git. Haz una copia de seguridad segura de la clave de carga y habilita Play App Signing en Play Console.
+
+Antes de publicar, configura en AdMob los mensajes de privacidad y consentimiento (UMP) para las regiones aplicables. La app solicita/actualiza el consentimiento antes de pedir anuncios y muestra el acceso a opciones de privacidad cuando UMP lo requiere. Completa también en Play Console el formulario de seguridad de datos y la política de privacidad. El botón de pista solo concede la recompensa tras confirmarla el SDK; desde el navegador web las funciones de AdMob nativo no se ejecutan.
